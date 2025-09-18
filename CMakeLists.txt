@@ -20,7 +20,7 @@ add_executable(TwoFluidSimulator ${SOURCES})
 target_compile_options(TwoFluidSimulator PRIVATE -O3 -march=native)
 
 # Buscar todos los .py en la carpeta raíz del proyecto
-file(GLOB PY_SCRIPTS "${CMAKE_SOURCE_DIR}/*.py")
+file(GLOB PY_SCRIPTS "${CMAKE_SOURCE_DIR}/pyscripts/*.py")
 
 # Copiar cada uno después del build
 foreach(script ${PY_SCRIPTS})

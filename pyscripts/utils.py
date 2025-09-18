@@ -1,10 +1,11 @@
 import numpy as np
 import matplotlib.pyplot as plt
 from matplotlib.animation import FuncAnimation
+import pandas as pd
 
 def animate_field_propagation(mode):
     # Leer datos de campo
-    data = pd.read_csv(f'field_data_{mode}.csv')
+    data = pd.read_csv('data/'+f'field_data_{mode}.csv')
     
     # Crear animación
     fig, ax = plt.subplots(figsize=(10, 6))

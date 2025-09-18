@@ -1,0 +1,10 @@
+^C:\USERS\CONEJ\DOCUMENTS\FUSION\EPFL\SIMULATIONS\GIT\2FLUIDPLASMASIM\BUILD\CMAKEFILES\54F405920873ED5798BB28951D244ACB\GENERATE.STAMP.RULE
+setlocal
+"C:\Program Files\CMake\bin\cmake.exe" -SC:/Users/conej/Documents/Fusion/EPFL/Simulations/Git/2FluidPlasmaSim -BC:/Users/conej/Documents/Fusion/EPFL/Simulations/Git/2FluidPlasmaSim/build --check-stamp-list CMakeFiles/generate.stamp.list --vs-solution-file C:/Users/conej/Documents/Fusion/EPFL/Simulations/Git/2FluidPlasmaSim/build/TwoFluidSimulator.sln
+if %errorlevel% neq 0 goto :cmEnd
+:cmEnd
+endlocal & call :cmErrorLevel %errorlevel% & goto :cmDone
+:cmErrorLevel
+exit /b %1
+:cmDone
+if %errorlevel% neq 0 goto :VCEnd

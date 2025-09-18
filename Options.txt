@@ -1,0 +1,84 @@
+Dimensiones y Geometrías Disponibles
+Dimensión	Complejidad	Aplicaciones típicas
+0D (Puntual)	Baja	Relaciones de dispersión, análisis de modos
+1D (Lineal)	Media	Propagación de ondas, rotación de Faraday
+2D (Plano)	Alta	Modos no paralelos, inhomogeneidades transversales
+2.5D (3D campos, 2D espacio)	Muy alta	Modos con componentes fuera del plano
+3D (Completo)	Extremadamente alta	Fenómenos completamente tridimensionales
+Configuraciones de Campo Magnético
+Configuración	Complejidad	Efectos físicos
+Sin campo magnético (B₀ = 0)	Baja	Modos puramente electrostáticos, ondas de plasma
+Campo uniforme (B₀ = constante)	Media	Modos R, L, O, X; rotación de Faraday
+Campo no uniforme (B₀ = f(x,y,z))	Alta	Resonancias espaciales, efectos de gradiente
+Campo orientable (θ variable)	Media	Dependencia angular de modos
+Opciones de Colisiones
+Modelo de colisiones	Complejidad	Efectos
+Sin colisiones (ν = 0)	Baja	Propagación sin amortiguamiento
+Colisiones constantes (ν = cte)	Media	Amortiguamiento uniforme
+Colisiones dependientes de densidad (ν ∝ n)	Alta	Amortiguamiento no uniforme
+Modelo completo de transporte	Muy alta	Efectos térmicos y de fricción
+Tipos de Ondas y Modos Implementables
+Modos electromagnéticos puros:
+
+Modo R (Right-hand circularly polarized)
+
+Modo L (Left-hand circularly polarized)
+
+Modo O (Ordinary)
+
+Modo X (Extraordinary)
+
+Modos híbridos:
+
+Modo whistler (R-mode a bajas frecuencias)
+
+Modo de ciclotrón iónico
+
+Modo de cavidad resonante
+
+Modos acoplados:
+
+Acoplamiento modo R-L
+
+Acoplamiento modo O-X
+
+Modos de superficie
+
+Opciones de Inhomogeneidades
+Tipo de inhomogeneidad	Efectos físicos
+Densidad variable	Puntos de corte, reflexión
+Campo magnético variable	Resonancias locales
+Geometría de contorno	Modos de cavidad, resonancias
+Gradientes suaves/bruscos	Reflexión, transmisión, conversión de modos
+Opciones de Visualización y Análisis
+Visualización 1D:
+
+Evolución temporal de campos
+
+Espectros de frecuencia
+
+Relaciones de dispersión
+
+Visualización 2D:
+
+Mapas de color de campos
+
+Líneas de campo electromagnético
+
+Propagación de frentes de onda
+
+Visualización 3D:
+
+Superficies de dispersión
+
+Volúmenes de campo
+
+Trayectorias de partículas virtuales
+
+Análisis cuantitativo:
+
+Coeficientes de reflexión/transmisión
+
+Tasas de crecimiento/amortiguamiento
+
+Energía y momento conservados

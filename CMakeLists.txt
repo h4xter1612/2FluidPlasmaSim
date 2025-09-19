@@ -34,3 +34,7 @@ add_custom_command(TARGET TwoFluidSimulator POST_BUILD
     COMMAND ${CMAKE_COMMAND} -E make_directory
             $<TARGET_FILE_DIR:TwoFluidSimulator>/data
 )
+add_custom_command(TARGET TwoFluidSimulator POST_BUILD
+    COMMAND ${CMAKE_COMMAND} -E make_directory
+            $<TARGET_FILE_DIR:TwoFluidSimulator>/data/snap
+)

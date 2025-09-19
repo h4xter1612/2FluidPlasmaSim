@@ -1,6 +1,7 @@
 #include "simulator.hh"
 #include <iostream>
 #include <cmath>
+#include <string>
 
 int main() {
     // Configurar parámetros del plasma
@@ -15,8 +16,10 @@ int main() {
     TwoFluidSimulator simulator(params);
     simulator.initialize();
 
+    std::string dataf = "data/";
+
     // Calcular y exportar relaciones de dispersión
-    simulator.export_dispersion_data("dispersion_data.csv");
+    simulator.export_dispersion_data(dataf+"dispersion_data.csv");
     std::cout << "Datos de dispersion exportados a dispersion_data.csv\n";
 
     // Calcular el paso de tiempo máximo permitido por CFL
@@ -25,13 +28,15 @@ int main() {
     
     std::cout << "Usando paso de tiempo dt = " << dt << " s (CFL recomienda < " << dz/params.LIGHT_SPEED << " s)\n";
 
+    simulator.set_save_interval(100);  // Guardar cada 100 pasos
+
     // Simular modo R
     std::cout << "Simulando modo R...\n";
     simulator.set_mode("R");
     simulator.set_frequency(5e9);  // 5 GHz
     simulator.set_amplitude(1.0);
     simulator.run_timesteps(10000, dt);
-    simulator.export_field_data("field_data_R.csv");
+    simulator.export_field_data(dataf+"field_data_R.csv");
     std::cout << "Datos del modo R exportados a field_data_R.csv\n";
 
     // Reinicializar para la próxima simulación
@@ -43,7 +48,7 @@ int main() {
     simulator.set_frequency(5e9);
     simulator.set_amplitude(1.0);
     simulator.run_timesteps(10000, dt);
-    simulator.export_field_data("field_data_L.csv");
+    simulator.export_field_data(dataf+"field_data_L.csv");
     std::cout << "Datos del modo L exportados a field_data_L.csv\n";
 
     // Reinicializar para la próxima simulación
@@ -55,7 +60,7 @@ int main() {
     simulator.set_frequency(5e9);
     simulator.set_amplitude(1.0);
     simulator.run_timesteps(10000, dt);
-    simulator.export_field_data("field_data_O.csv");
+    simulator.export_field_data(dataf+"field_data_O.csv");
     std::cout << "Datos del modo O exportados a field_data_O.csv\n";
 
     // Reinicializar para la próxima simulación
@@ -67,7 +72,7 @@ int main() {
     simulator.set_frequency(5e9);
     simulator.set_amplitude(1.0);
     simulator.run_timesteps(10000, dt);
-    simulator.export_field_data("field_data_X.csv");
+    simulator.export_field_data(dataf+"field_data_X.csv");
     std::cout << "Datos del modo X exportados to field_data_X.csv\n";
 
     std::cout << "Todas las simulaciones completadas. Use Python para visualizar los resultados.\n";

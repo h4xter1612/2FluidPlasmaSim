@@ -20,6 +20,10 @@ public:
     void set_mode(const std::string& mode) { current_mode_ = mode; }
     void set_frequency(double freq) { current_frequency_ = freq; }
     void set_amplitude(double amp) { current_amplitude_ = amp; }
+
+    // Snapshots for propagation
+    void set_save_interval(int interval) { save_interval_ = interval; }
+    void export_field_data_binary(const std::string& filename) const;
     
 private:
     PlasmaParams params_;
@@ -46,6 +50,9 @@ private:
         const std::vector<std::vector<double>>& currents,
         std::vector<std::vector<double>>& dfields_dt,
         std::vector<std::vector<double>>& dcurrents_dt);
+
+    int save_interval_ = 100;  // Guardar cada 100 pasos
+    int step_count_ = 0;       // Contador de pasos
 };
 
 #endif

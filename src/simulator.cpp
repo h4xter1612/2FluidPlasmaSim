@@ -10,7 +10,7 @@
 #endif
 
 TwoFluidSimulator::TwoFluidSimulator(const PlasmaParams& params)
-    : params_(params), dispersion_(params) {}
+    : params_(params), dispersion_(params), step_count_(0) {}
 
 void TwoFluidSimulator::initialize() {
     // Inicializar la malla espacial
@@ -40,12 +40,18 @@ void TwoFluidSimulator::excite_mode(const std::string& mode_type, double frequen
         // Campos magnéticos correspondientes (relación E/B = c para onda plana)
         fields_[3][0] = -amplitude * std::sin(omega * time) / c; // Bx
         fields_[4][0] = amplitude * std::cos(omega * time) / c;  // By
+        //
+        // std::cout << "DEBUG: Inicializando Bx=" << fields_[3][0] 
+        //           << ", By=" << fields_[4][0] << std::endl;
     } else if (mode_type == "L") {
         // Modo izquierdo
         fields_[0][0] = amplitude * std::cos(omega * time); // Ex
         fields_[1][0] = -amplitude * std::sin(omega * time); // Ey
         fields_[3][0] = amplitude * std::sin(omega * time) / c; // Bx
         fields_[4][0] = amplitude * std::cos(omega * time) / c; // By
+        //
+        // std::cout << "DEBUG: Inicializando Bx=" << fields_[3][0]
+        //     << ", By=" << fields_[4][0] << std::endl;
     } else if (mode_type == "O") {
         // Modo ordinario (longitudinal)
         fields_[2][0] = amplitude * std::cos(omega * time); // Ez
@@ -71,24 +77,67 @@ void TwoFluidSimulator::run_timesteps(int num_steps, double dt) {
         if (!current_mode_.empty()) {
             excite_mode(current_mode_, current_frequency_, current_amplitude_, current_time);
         }
-        
         // Diagnóstico más detallado
-        if (step % 100 == 0) {
-            std::cout << "Paso " << step << ", T = " << current_time << ": "
-                      << "Ex[0] = " << fields_[0][0] << ", "
-                      << "Ey[0] = " << fields_[1][0] << ", "
-                      << "Bx[0] = " << fields_[3][0] << ", "
-                      << "By[0] = " << fields_[4][0] << ", "
-                      << "Ex[100] = " << fields_[0][100] << ", "
-                      << "Ey[100] = " << fields_[1][100] << std::endl;
+        // if (step % 100 == 0) {
+        //     std::cout << "Paso " << step << ", T = " << current_time << ": "
+        //               << "Ex[0] = " << fields_[0][0] << ", "
+        //               << "Ey[0] = " << fields_[1][0] << ", "
+        //               << "Bx[0] = " << fields_[3][0] << ", "
+        //               << "By[0] = " << fields_[4][0] << ", "
+        //               << "Ex[100] = " << fields_[0][100] << ", "
+        //               << "Ey[100] = " << fields_[1][100] << std::endl;
+        // }
+        // // DIAGNÓSTICO: Verificar valores de campos magnéticos
+        // if (step % 100 == 0) {
+        //     std::cout << "Paso " << step << ": "
+        //               << "Bx[0] = " << fields_[3][0] << ", "
+        //               << "By[0] = " << fields_[4][0] << ", "
+        //               << "Bx[100] = " << fields_[3][100] << ", "
+        //               << "By[100] = " << fields_[4][100] << std::endl;
+        // }
+
+        // Guardar snapshot en intervalos regulares
+        if (step_count_ % save_interval_ == 0) {
+            std::string filename = "data/snap/field_data_" + current_mode_ + "_" + 
+                                  std::to_string(step_count_ / save_interval_) + ".csv";
+            export_field_data(filename);
         }
-        
         update_system_rk4(dt);
-        // apply_collisions(dt);
-        // apply_boundary_conditions_pml();
+        apply_collisions(dt);
+        apply_boundary_conditions_pml();
         
         current_time += dt;
+        step_count_++;
     }
+    // Guardar el estado final
+    std::string filename = "data/field_data_" + current_mode_ + "_final.csv";
+    export_field_data(filename);
+}
+
+void TwoFluidSimulator::export_field_data_binary(const std::string& filename) const {
+    std::ofstream file(filename, std::ios::binary);
+    
+    // Escribir dimensiones
+    int rows = params_.grid_points;
+    int cols = 10; // z + 6 campos + 3 corrientes
+    file.write(reinterpret_cast<const char*>(&rows), sizeof(int));
+    file.write(reinterpret_cast<const char*>(&cols), sizeof(int));
+    
+    // Escribir datos
+    for (int i = 0; i < params_.grid_points; ++i) {
+        double z_val = z_grid_[i];
+        file.write(reinterpret_cast<const char*>(&z_val), sizeof(double));
+        
+        for (int j = 0; j < 6; ++j) {
+            file.write(reinterpret_cast<const char*>(&fields_[j][i]), sizeof(double));
+        }
+        
+        for (int j = 0; j < 3; ++j) {
+            file.write(reinterpret_cast<const char*>(&currents_[j][i]), sizeof(double));
+        }
+    }
+    
+    file.close();
 }
 
 void TwoFluidSimulator::compute_derivatives(

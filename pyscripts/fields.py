@@ -1,6 +1,7 @@
 import numpy as np
 import matplotlib.pyplot as plt
 import pandas as pd
+import os
 
 def plot_field_data(mode):
     # Leer datos de campo
@@ -51,7 +52,8 @@ def plot_field_data(mode):
         axes[1,1].remove()
     
     plt.tight_layout()
-    plt.savefig('data/'+f'field_plot_{mode}.png', dpi=300)
+    os.makedirs('animations', exist_ok=True)
+    plt.savefig('plots/'+f'field_plot_{mode}.png', dpi=300)
     plt.show()
 
 if __name__ == "__main__":

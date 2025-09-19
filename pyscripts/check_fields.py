@@ -2,6 +2,7 @@
 import pandas as pd
 import numpy as np
 import matplotlib.pyplot as plt
+import os
 
 def check_magnetic_fields(mode):
     try:
@@ -43,7 +44,8 @@ def check_magnetic_fields(mode):
         plt.title(f'Magnetic Fields - Mode {mode}')
         
         plt.tight_layout()
-        plt.savefig(f'field_check_{mode}.png')
+        os.makedirs('plots', exist_ok=True)
+        plt.savefig(f'plots/field_check_{mode}.png')
         plt.show()
         
     except FileNotFoundError:

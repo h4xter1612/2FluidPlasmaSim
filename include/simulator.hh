@@ -16,6 +16,11 @@ public:
     void export_field_data(const std::string& filename) const;
     void export_dispersion_data(const std::string& filename) const;
     
+    // Setters para configurar la simulación
+    void set_mode(const std::string& mode) { current_mode_ = mode; }
+    void set_frequency(double freq) { current_frequency_ = freq; }
+    void set_amplitude(double amp) { current_amplitude_ = amp; }
+    
 private:
     PlasmaParams params_;
     DispersionRelation dispersion_;
@@ -31,7 +36,7 @@ private:
     double current_amplitude_;
     
     // Métodos internos para RK4
-    void update_system_rk4(double dt);  // Update fields and currents
+    void update_system_rk4(double dt);
     void apply_boundary_conditions_pml();
     void apply_collisions(double dt);
     

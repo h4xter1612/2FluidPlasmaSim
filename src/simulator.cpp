@@ -10,7 +10,7 @@
 #endif
 
 TwoFluidSimulator::TwoFluidSimulator(const PlasmaParams& params)
-: params_(params), dispersion_(params) {}
+    : params_(params), dispersion_(params) {}
 
 void TwoFluidSimulator::initialize() {
     // Inicializar la malla espacial
@@ -29,18 +29,25 @@ void TwoFluidSimulator::initialize() {
 
 void TwoFluidSimulator::excite_mode(const std::string& mode_type, double frequency, double amplitude, double time) {
     double omega = 2.0 * M_PI * frequency;
+    double c = params_.LIGHT_SPEED;
 
     // Excitar el modo apropiado
     if (mode_type == "R") {
-        // Modo derecho
+        // Modo derecho - campos electromagnéticos consistentes
         fields_[0][0] = amplitude * std::cos(omega * time); // Ex
         fields_[1][0] = amplitude * std::sin(omega * time); // Ey
+        
+        // Campos magnéticos correspondientes (relación E/B = c para onda plana)
+        fields_[3][0] = -amplitude * std::sin(omega * time) / c; // Bx
+        fields_[4][0] = amplitude * std::cos(omega * time) / c;  // By
     } else if (mode_type == "L") {
         // Modo izquierdo
         fields_[0][0] = amplitude * std::cos(omega * time); // Ex
         fields_[1][0] = -amplitude * std::sin(omega * time); // Ey
+        fields_[3][0] = amplitude * std::sin(omega * time) / c; // Bx
+        fields_[4][0] = amplitude * std::cos(omega * time) / c; // By
     } else if (mode_type == "O") {
-        // Modo ordinario
+        // Modo ordinario (longitudinal)
         fields_[2][0] = amplitude * std::cos(omega * time); // Ez
     } else if (mode_type == "X") {
         // Modo extraordinario
@@ -49,41 +56,40 @@ void TwoFluidSimulator::excite_mode(const std::string& mode_type, double frequen
     }
 }
 
-
 void TwoFluidSimulator::run_timesteps(int num_steps, double dt) {
     double current_time = 0.0;
-
+    double c = params_.LIGHT_SPEED;
+    double dz = z_grid_[1] - z_grid_[0];
+    
+    // Verificar condición CFL
+    double cfl_dt = dz / c;
+    if (dt > cfl_dt * 0.1) {
+        std::cout << "Advertencia: dt = " << dt << " puede ser demasiado grande. CFL recomienda dt < " << cfl_dt * 0.1 << std::endl;
+    }
+    
     for (int step = 0; step < num_steps; ++step) {
         if (!current_mode_.empty()) {
             excite_mode(current_mode_, current_frequency_, current_amplitude_, current_time);
         }
-
-        // Guardar estado actual para posibles reinicios
-        fields_prev_ = fields_;
-        currents_prev_ = currents_;
-
-        try {
-            // Usar RK4 para integración temporal
-            update_system_rk4(dt);
-
-            // Aplicar colisiones
-            apply_collisions(dt);
-
-            // Aplicar condiciones de contorno PML
-            apply_boundary_conditions_pml();
-
-        } catch (const std::exception& e) {
-            // En caso de inestabilidad, restaurar estado anterior
-            std::cerr << "Advertencia: Inestabilidad detectada. Restaurando estado anterior." << std::endl;
-            fields_ = fields_prev_;
-            currents_ = currents_prev_;
-            break;
+        
+        // Diagnóstico más detallado
+        if (step % 100 == 0) {
+            std::cout << "Paso " << step << ", T = " << current_time << ": "
+                      << "Ex[0] = " << fields_[0][0] << ", "
+                      << "Ey[0] = " << fields_[1][0] << ", "
+                      << "Bx[0] = " << fields_[3][0] << ", "
+                      << "By[0] = " << fields_[4][0] << ", "
+                      << "Ex[100] = " << fields_[0][100] << ", "
+                      << "Ey[100] = " << fields_[1][100] << std::endl;
         }
-
+        
+        update_system_rk4(dt);
+        // apply_collisions(dt);
+        // apply_boundary_conditions_pml();
+        
         current_time += dt;
     }
 }
-
 
 void TwoFluidSimulator::compute_derivatives(
     const std::vector<std::vector<double>>& fields,
@@ -104,28 +110,35 @@ void TwoFluidSimulator::compute_derivatives(
 
     // Diferencias finitas de 4to orden para derivadas espaciales
     for (int i = 2; i < params_.grid_points - 2; ++i) {
-        // Calcular todas las derivadas espaciales necesarias
+        // Calcular derivadas espaciales
         double dEx_dz = (-fields[0][i+2] + 8*fields[0][i+1] - 8*fields[0][i-1] + fields[0][i-2]) / (12.0 * dz);
         double dEy_dz = (-fields[1][i+2] + 8*fields[1][i+1] - 8*fields[1][i-1] + fields[1][i-2]) / (12.0 * dz);
         double dBx_dz = (-fields[3][i+2] + 8*fields[3][i+1] - 8*fields[3][i-1] + fields[3][i-2]) / (12.0 * dz);
         double dBy_dz = (-fields[4][i+2] + 8*fields[4][i+1] - 8*fields[4][i-1] + fields[4][i-2]) / (12.0 * dz);
 
-        // Ecuaciones de Maxwell CORREGIDAS para 1D
-        dfields_dt[0][i] = c * c * dBy_dz - currents[0][i] / epsilon0;  // dEx/dt = c²(∂By/∂z) - Jx/ε₀
-        dfields_dt[1][i] = -c * c * dBx_dz - currents[1][i] / epsilon0; // dEy/dt = -c²(∂Bx/∂z) - Jy/ε₀
-        dfields_dt[2][i] = -currents[2][i] / epsilon0;                  // dEz/dt = -Jz/ε₀
+        // Ecuaciones de Maxwell para 1D
+        dfields_dt[0][i] = c * c * dBy_dz - currents[0][i] / epsilon0;  // ∂Ex/∂t = c²∂By/∂z - Jx/ε₀
+        dfields_dt[1][i] = -c * c * dBx_dz - currents[1][i] / epsilon0; // ∂Ey/∂t = -c²∂Bx/∂z - Jy/ε₀
+        dfields_dt[2][i] = -currents[2][i] / epsilon0;                  // ∂Ez/∂t = -Jz/ε₀
 
-        dfields_dt[3][i] = -dEy_dz;  // dBx/dt = -∂Ey/∂z
-        dfields_dt[4][i] = dEx_dz;   // dBy/dt = ∂Ex/∂z
-        dfields_dt[5][i] = 0.0;      // dBz/dt = 0
+        dfields_dt[3][i] = -dEy_dz;  // ∂Bx/∂t = -∂Ey/∂z
+        dfields_dt[4][i] = dEx_dz;   // ∂By/∂t = ∂Ex/∂z
+        dfields_dt[5][i] = 0.0;      // ∂Bz/∂t = 0
 
-        // Ecuaciones de momento para corrientes (respuesta del plasma)
+        // Ecuaciones de momento para corrientes
         dcurrents_dt[0][i] = epsilon0 * omega_pe * omega_pe * fields[0][i] + 
             omega_ce * currents[1][i] - nu * currents[0][i];
         dcurrents_dt[1][i] = epsilon0 * omega_pe * omega_pe * fields[1][i] - 
             omega_ce * currents[0][i] - nu * currents[1][i];
         dcurrents_dt[2][i] = epsilon0 * omega_pe * omega_pe * fields[2][i] - 
             nu * currents[2][i];
+            
+        // Diagnóstico adicional para detectar problemas
+        if (i == 100 && std::isnan(dfields_dt[0][i])) {
+            std::cout << "NaN detectado en derivadas: " 
+                      << "dBy_dz = " << dBy_dz << ", "
+                      << "currents[0][i] = " << currents[0][i] << std::endl;
+        }
     }
 }
 
@@ -204,6 +217,23 @@ void TwoFluidSimulator::update_system_rk4(double dt) {
                 2*k3_currents[i][j] + k4_currents[i][j]) / 6.0;
         }
     }
+    
+    // Después de actualizar campos y corrientes, verificar valores
+    for (int i = 0; i < 6; ++i) {
+        for (int j = 0; j < params_.grid_points; ++j) {
+            if (std::isnan(fields_[i][j]) || std::isinf(fields_[i][j])) {
+                fields_[i][j] = 0.0;  // Resetear valores problemáticos
+            }
+        }
+    }
+    
+    for (int i = 0; i < 3; ++i) {
+        for (int j = 0; j < params_.grid_points; ++j) {
+            if (std::isnan(currents_[i][j]) || std::isinf(currents_[i][j])) {
+                currents_[i][j] = 0.0;  // Resetear valores problemáticos
+            }
+        }
+    }
 }
 
 void TwoFluidSimulator::apply_collisions(double dt) {
@@ -218,8 +248,8 @@ void TwoFluidSimulator::apply_collisions(double dt) {
 }
 
 void TwoFluidSimulator::apply_boundary_conditions_pml() {
-    int pml_width = 20;  // Ancho de la capa PML
-    double sigma_max = 0.01;  // Reducir la atenuación máxima
+    int pml_width = 10;  // Ancho de la capa PML
+    double sigma_max = 0.001;  // Reducir la atenuación máxima
 
     for (int i = 0; i < pml_width; ++i) {
         // Calcular perfil de conductividad (suave)
@@ -246,6 +276,7 @@ void TwoFluidSimulator::export_field_data(const std::string& filename) const {
 
     file.close();
 }
+
 void TwoFluidSimulator::export_dispersion_data(const std::string& filename) const {
     // Calcular curvas de dispersión y obtener los resultados
     auto [frequencies, k_R, k_L, k_O, k_X] = dispersion_.calculate_dispersion_curves(1e6, 1e11, 1000);

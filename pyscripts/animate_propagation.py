@@ -20,7 +20,7 @@ def animate_field_propagation(mode):
     data_files = sorted(data_files, key=numeric_sort_key)
     
     if not data_files:
-        print(f"No se encontraron archivos de datos para el modo {mode}")
+        print(f"No data files found for mode {mode}")
         return
     
     # Leer todos los datos
@@ -35,9 +35,9 @@ def animate_field_propagation(mode):
     # Configurar ejes para campos eléctricos
     ax1.set_xlim(0, all_data[0]['z'].max())
     ax1.set_ylim(-1.5, 1.5)
-    ax1.set_ylabel('Campo Eléctrico (V/m)')
+    ax1.set_ylabel('Electric Field (V/m)')
     ax1.grid(True)
-    ax1.set_title(f'Propagación del Modo {mode}')
+    ax1.set_title(f'Propagation of Mode {mode}')
     
     # Configurar ejes para campos magnéticos (con escala apropiada)
     ax2.set_xlim(0, all_data[0]['z'].max())
@@ -48,8 +48,8 @@ def animate_field_propagation(mode):
     else:  # Modo X
         ax2.set_ylim(-1.0, 1.0)    # Para modo X (Bx más grande)
     
-    ax2.set_xlabel('Posición (m)')
-    ax2.set_ylabel('Campo Magnético (T)')
+    ax2.set_xlabel('Position (m)')
+    ax2.set_ylabel('Magnetic Field (T)')
     ax2.grid(True)
     
     # Inicializar líneas
@@ -116,7 +116,7 @@ def animate_field_propagation(mode):
             line_ey.set_data(data['z'], data['Ey'])
             line_bx.set_data(data['z'], data['Bx'])
             line_by.set_data(data['z'], data['By'])
-            time_text.set_text(f'Tiempo = {time:.2e} s')
+            time_text.set_text(f'Time = {time:.2e} s')
             return line_ex, line_ey, line_bx, line_by, time_text
             
         elif mode == 'O':
@@ -143,13 +143,13 @@ def animate_field_propagation(mode):
     try:
         os.makedirs('animations', exist_ok=True)
         ani.save(f'animations/propagation_{mode}.gif', writer='pillow', fps=5)
-        print(f"Animación guardada como animations/propagation_{mode}.gif")
+        print(f"Animation saved as animations/propagation_{mode}.gif")
     except Exception as e:
-        print(f"Error al guardar la animación: {e}")
+        print(f"Error saving animation: {e}")
     
     plt.show()
 
 if __name__ == "__main__":
     for mode in ['R', 'L', 'O', 'X']:
-        print(f"Generando animación para el modo {mode}...")
+        print(f"Generating animation for mode {mode}...")
         animate_field_propagation(mode)

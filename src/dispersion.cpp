@@ -55,14 +55,21 @@ std::complex<double> DispersionRelation::extraordinary_mode(double omega) const 
     double omega_ce = params_.electron_cyclotron_frequency();
     double nu = params_.collision_frequency;
     
-    // Esta es una simplificación; la relación completa es más compleja
-    std::complex<double> numerator(omega_pe * omega_pe * (omega * omega - omega_pe * omega_pe), 
-                                  nu * omega_pe * omega_pe * omega);
-    std::complex<double> denominator(omega * omega * (omega * omega - omega_ce * omega_ce - omega_pe * omega_pe), 
-                                    nu * omega * (omega * omega - omega_ce * omega_ce));
+    // Relación más precisa para el modo X
+    std::complex<double> omega_complex(omega, -nu); // ω → ω - iν
     
-    std::complex<double> k = omega / params_.LIGHT_SPEED * 
-                            std::sqrt(1.0 - numerator / denominator);
+    std::complex<double> S = 1.0 - (omega_pe * omega_pe) / 
+                            (omega_complex * omega_complex - omega_ce * omega_ce);
+    std::complex<double> D = (omega_ce * omega_pe * omega_pe) / 
+                            (omega_complex * (omega_complex * omega_complex - omega_ce * omega_ce));
+    std::complex<double> P = 1.0 - (omega_pe * omega_pe) / (omega_complex * omega_complex);
+    
+    // Relación de dispersión completa para el modo X
+    std::complex<double> numerator = S * S - D * D;
+    std::complex<double> denominator = S;
+    
+    std::complex<double> n_squared = (numerator / denominator); // Índice de refracción al cuadrado
+    std::complex<double> k = (omega_complex / params_.LIGHT_SPEED) * std::sqrt(n_squared);
     
     return k;
 }

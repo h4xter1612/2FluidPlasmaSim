@@ -4,7 +4,6 @@ import pandas as pd
 import os
 
 def plot_dispersion_relations(data):
-    
     # Crear figura
     fig, axes = plt.subplots(2, 2, figsize=(12, 10))
     
@@ -53,7 +52,6 @@ def plot_dispersion_relations(data):
     plt.show()
 
 def analyze_cutoffs_resonances(data):
-    
     # Encontrar cutoffs (donde k ≈ 0)
     cutoff_R = data['frequency'][np.argmin(np.abs(data['Re(k_R)']))]
     cutoff_L = data['frequency'][np.argmin(np.abs(data['Re(k_L)']))]
@@ -185,21 +183,72 @@ def FR_print_results(summary, L, src):
     print(summary)
     print("="*60 + "\n")
 
+def plot_current_ratio_analysis():
+    """
+    Analizar la relación entre corrientes electrónicas e iónicas para todos los modos
+    """
+    modes = ['R', 'L', 'O', 'X']
+    ratios = []
+    
+    plt.figure(figsize=(10, 6))
+    
+    for i, mode in enumerate(modes):
+        try:
+            data = pd.read_csv(f'data/field_data_{mode}.csv')
+            
+            # Calcular la relación máxima entre corrientes
+            j_e_max = np.max(np.abs(data[['Jx_e', 'Jy_e', 'Jz_e']].values))
+            j_i_max = np.max(np.abs(data[['Jx_i', 'Jy_i', 'Jz_i']].values))
+            ratio = j_e_max / j_i_max if j_i_max > 0 else float('inf')
+            ratios.append(ratio)
+            
+            # Graficar la relación a lo largo de z
+            jx_ratio = np.abs(data['Jx_e']) / np.abs(data['Jx_i'] + 1e-30)  # Evitar división por cero
+            plt.plot(data['z'], jx_ratio, label=f'Mode {mode} (avg: {np.mean(jx_ratio):.1f})')
+            
+        except FileNotFoundError:
+            print(f"File for mode {mode} not found")
+            ratios.append(0)
+    
+    plt.xlabel('Position (m)')
+    plt.ylabel('|J_e| / |J_i| Ratio')
+    plt.title('Electron to Ion Current Ratio')
+    plt.legend()
+    plt.grid(True)
+    plt.yscale('log')
+    plt.tight_layout()
+    plt.savefig('plots/current_ratio_analysis.png', dpi=300)
+    plt.show()
+    
+    # Imprimir resumen
+    print("\nCurrent Ratio Summary:")
+    for mode, ratio in zip(modes, ratios):
+        print(f"Mode {mode}: {ratio:.1f}")
 
 if __name__ == "__main__":
     os.makedirs('animations', exist_ok=True)
+    os.makedirs('plots', exist_ok=True)
+    
     # Leer datos de dispersión
     data = pd.read_csv('data/dispersion_data.csv')
+    
     # Predict Faraday using inferred L
     res_disp, L = faraday_from_dispersion_with_inferred_L(
         data, mode_for_L='R', folder='data'
     )
+    
     # Compare measured vs predicted
     summary, disp_vs_freq = rotation_from_fields_vs_dispersion(
         mode='R', dispersion_csv='data/dispersion_data.csv', folder='data'
     )
+    
     # Output
     _, src = infer_L_from_fieldfile('R', folder='data')
     FR_print_results(summary, L, src)
+    
+    # Análisis de relaciones de dispersión
     plot_dispersion_relations(data)
     analyze_cutoffs_resonances(data)
+    
+    # Análisis de relación de corrientes
+    plot_current_ratio_analysis()

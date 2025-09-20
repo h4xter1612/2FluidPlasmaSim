@@ -35,6 +35,10 @@ private:
     std::vector<std::vector<double>> fields_prev_; // Campos en paso anterior (para RK4)
     std::vector<std::vector<double>> currents_prev_; // Corrientes en paso anterior (para RK4)
     
+    // Nuevos miembros para corrientes iónicas
+    std::vector<std::vector<double>> currents_ion_; // Jx_i, Jy_i, Jz_i
+    std::vector<std::vector<double>> currents_ion_prev_;
+    
     std::string current_mode_;
     double current_frequency_;
     double current_amplitude_;
@@ -48,8 +52,10 @@ private:
     void compute_derivatives(
         const std::vector<std::vector<double>>& fields,
         const std::vector<std::vector<double>>& currents,
+        const std::vector<std::vector<double>>& currents_ion,
         std::vector<std::vector<double>>& dfields_dt,
-        std::vector<std::vector<double>>& dcurrents_dt);
+        std::vector<std::vector<double>>& dcurrents_dt,
+        std::vector<std::vector<double>>& dcurrents_dt_ion);
 
     int save_interval_ = 100;  // Guardar cada 100 pasos
     int step_count_ = 0;       // Contador de pasos

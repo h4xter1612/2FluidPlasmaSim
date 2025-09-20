@@ -1,4 +1,3 @@
-# animate_propagation_fixed.py
 import numpy as np
 import matplotlib.pyplot as plt
 from matplotlib.animation import FuncAnimation
@@ -29,109 +28,84 @@ def animate_field_propagation(mode):
         data = pd.read_csv(file)
         all_data.append(data)
     
-    # Crear figura con subplots independientes
-    fig, (ax1, ax2) = plt.subplots(2, 1, figsize=(12, 8))
+    # Crear figura con subplots
+    fig, axes = plt.subplots(3, 1, figsize=(12, 10))
     
     # Configurar ejes para campos eléctricos
-    ax1.set_xlim(0, all_data[0]['z'].max())
-    ax1.set_ylim(-1.5, 1.5)
-    ax1.set_ylabel('Electric Field (V/m)')
-    ax1.grid(True)
-    ax1.set_title(f'Propagation of Mode {mode}')
+    axes[0].set_xlim(0, all_data[0]['z'].max())
+    axes[0].set_ylim(-1.5, 1.5)
+    axes[0].set_ylabel('Electric Field (V/m)')
+    axes[0].grid(True)
+    axes[0].set_title(f'Propagation of Mode {mode}')
     
-    # Configurar ejes para campos magnéticos (con escala apropiada)
-    ax2.set_xlim(0, all_data[0]['z'].max())
+    # Configurar ejes para campos magnéticos
+    axes[1].set_xlim(0, all_data[0]['z'].max())
     
     # Establecer límites adecuados para campos magnéticos
     if mode in ['R', 'L', 'O']:
-        ax2.set_ylim(-2e-9, 2e-9)  # Para modos R, L, O
+        axes[1].set_ylim(-2e-9, 2e-9)  # Para modos R, L, O
     else:  # Modo X
-        ax2.set_ylim(-1.0, 1.0)    # Para modo X (Bx más grande)
+        axes[1].set_ylim(-1.0, 1.0)    # Para modo X (Bx más grande)
     
-    ax2.set_xlabel('Position (m)')
-    ax2.set_ylabel('Magnetic Field (T)')
-    ax2.grid(True)
+    axes[1].set_ylabel('Magnetic Field (T)')
+    axes[1].grid(True)
+    
+    # Configurar ejes para corrientes
+    axes[2].set_xlim(0, all_data[0]['z'].max())
+    
+    # Establecer límites adecuados para corrientes
+    if mode in ['R', 'L', 'O']:
+        axes[2].set_ylim(-0.2, 0.2)  # Para modos R, L, O
+    else:  # Modo X
+        axes[2].set_ylim(-2e6, 2e6)  # Para modo X (corrientes más grandes)
+    
+    axes[2].set_xlabel('Position (m)')
+    axes[2].set_ylabel('Current Density (A/m²)')
+    axes[2].grid(True)
     
     # Inicializar líneas
-    if mode in ['R', 'L']:
-        # Campos eléctricos
-        line_ex, = ax1.plot([], [], 'b-', label='Ex')
-        line_ey, = ax1.plot([], [], 'r-', label='Ey')
-        ax1.legend()
-        
-        # Campos magnéticos
-        line_bx, = ax2.plot([], [], 'c-', label='Bx')
-        line_by, = ax2.plot([], [], 'm-', label='By')
-        ax2.legend()
-        
-    elif mode == 'O':
-        # Modo ordinario (solo Ez)
-        line_ez, = ax1.plot([], [], 'g-', label='Ez')
-        ax1.legend()
-        
-        # Para modo O, los campos magnéticos son pequeños
-        line_bx, = ax2.plot([], [], 'c-', label='Bx')
-        line_by, = ax2.plot([], [], 'm-', label='By')
-        ax2.legend()
-        
-    else:  # Modo X
-        # Campos eléctricos
-        line_ex, = ax1.plot([], [], 'b-', label='Ex')
-        ax1.legend()
-        
-        # Campos magnéticos (Bx es dominante en modo X)
-        line_bx, = ax2.plot([], [], 'r-', label='Bx')
-        line_by, = ax2.plot([], [], 'm-', label='By')
-        ax2.legend()
+    # Campos eléctricos
+    line_ex, = axes[0].plot([], [], 'b-', label='Ex')
+    line_ey, = axes[0].plot([], [], 'r-', label='Ey')
+    axes[0].legend()
+    
+    # Campos magnéticos
+    line_bx, = axes[1].plot([], [], 'c-', label='Bx')
+    line_by, = axes[1].plot([], [], 'm-', label='By')
+    axes[1].legend()
+    
+    # Corrientes
+    line_jx_e, = axes[2].plot([], [], 'b-', label='Jx_e')
+    line_jx_i, = axes[2].plot([], [], 'r-', label='Jx_i')
+    axes[2].legend()
     
     # Texto para mostrar el tiempo
-    time_text = ax1.text(0.02, 0.95, '', transform=ax1.transAxes)
+    time_text = axes[0].text(0.02, 0.95, '', transform=axes[0].transAxes)
     
     # Función de inicialización
     def init():
-        if mode in ['R', 'L']:
-            line_ex.set_data([], [])
-            line_ey.set_data([], [])
-            line_bx.set_data([], [])
-            line_by.set_data([], [])
-            return line_ex, line_ey, line_bx, line_by, time_text
-        elif mode == 'O':
-            line_ez.set_data([], [])
-            line_bx.set_data([], [])
-            line_by.set_data([], [])
-            return line_ez, line_bx, line_by, time_text
-        else:
-            line_ex.set_data([], [])
-            line_bx.set_data([], [])
-            line_by.set_data([], [])
-            return line_ex, line_bx, line_by, time_text
+        line_ex.set_data([], [])
+        line_ey.set_data([], [])
+        line_bx.set_data([], [])
+        line_by.set_data([], [])
+        line_jx_e.set_data([], [])
+        line_jx_i.set_data([], [])
+        return line_ex, line_ey, line_bx, line_by, line_jx_e, line_jx_i, time_text
     
     # Función de animación
     def animate(i):
         data = all_data[i]
         time = i * 3.3389e-11  # Aproximación del tiempo
         
-        if mode in ['R', 'L']:
-            line_ex.set_data(data['z'], data['Ex'])
-            line_ey.set_data(data['z'], data['Ey'])
-            line_bx.set_data(data['z'], data['Bx'])
-            line_by.set_data(data['z'], data['By'])
-            time_text.set_text(f'Time = {time:.2e} s')
-            return line_ex, line_ey, line_bx, line_by, time_text
-            
-        elif mode == 'O':
-            line_ez.set_data(data['z'], data['Ez'])
-            line_bx.set_data(data['z'], data['Bx'])
-            line_by.set_data(data['z'], data['By'])
-            time_text.set_text(f'Tiempo = {time:.2e} s')
-            return line_ez, line_bx, line_by, time_text
-            
-        else:  # Modo X
-            line_ex.set_data(data['z'], data['Ex'])
-            line_bx.set_data(data['z'], data['Bx'])
-            line_by.set_data(data['z'], data['By'])
-            time_text.set_text(f'Tiempo = {time:.2e} s')
-            return line_ex, line_bx, line_by, time_text
+        line_ex.set_data(data['z'], data['Ex'])
+        line_ey.set_data(data['z'], data['Ey'])
+        line_bx.set_data(data['z'], data['Bx'])
+        line_by.set_data(data['z'], data['By'])
+        line_jx_e.set_data(data['z'], data['Jx_e'])
+        line_jx_i.set_data(data['z'], data['Jx_i'])
+        time_text.set_text(f'Time = {time:.2e} s')
+        
+        return line_ex, line_ey, line_bx, line_by, line_jx_e, line_jx_i, time_text
     
     # Crear animación
     ani = FuncAnimation(fig, animate, frames=len(all_data),

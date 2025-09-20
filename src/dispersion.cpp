@@ -14,15 +14,35 @@ double PlasmaParams::electron_plasma_frequency() const {
 double PlasmaParams::electron_cyclotron_frequency() const {
     return ELEMENTARY_CHARGE * magnetic_field / ELECTRON_MASS;
 }
+double PlasmaParams::ion_plasma_frequency() const {
+    return std::sqrt(ion_density * ELEMENTARY_CHARGE * ELEMENTARY_CHARGE / 
+                    (ion_mass * VACUUM_PERMITTIVITY));
+}
+
+double PlasmaParams::ion_cyclotron_frequency() const {
+    return ELEMENTARY_CHARGE * magnetic_field / ion_mass;
+}
 
 std::complex<double> DispersionRelation::right_hand_mode(double omega) const {
     double omega_pe = params_.electron_plasma_frequency();
     double omega_ce = params_.electron_cyclotron_frequency();
-    double nu = params_.collision_frequency;
+    double omega_pi = params_.ion_plasma_frequency();
+    double omega_ci = params_.ion_cyclotron_frequency();
+    double nu_e = params_.collision_frequency;
+    double nu_i = params_.ion_collision_frequency;
     
-    std::complex<double> denominator(omega * (omega + omega_ce), nu * omega);
+    // Usar frecuencias complejas para incluir colisiones
+    std::complex<double> omega_e(omega, -nu_e);
+    std::complex<double> omega_i(omega, -nu_i);
+    
+    // Contribución de electrones e iones
+    std::complex<double> electron_term = (omega_pe * omega_pe) / 
+                                       (omega_e * (omega_e + omega_ce));
+    std::complex<double> ion_term = (omega_pi * omega_pi) / 
+                                  (omega_i * (omega_i - omega_ci));
+    
     std::complex<double> k = omega / params_.LIGHT_SPEED * 
-                            std::sqrt(1.0 - (omega_pe * omega_pe) / denominator);
+                            std::sqrt(1.0 - electron_term - ion_term);
     
     return k;
 }
@@ -30,22 +50,40 @@ std::complex<double> DispersionRelation::right_hand_mode(double omega) const {
 std::complex<double> DispersionRelation::left_hand_mode(double omega) const {
     double omega_pe = params_.electron_plasma_frequency();
     double omega_ce = params_.electron_cyclotron_frequency();
-    double nu = params_.collision_frequency;
+    double omega_pi = params_.ion_plasma_frequency();
+    double omega_ci = params_.ion_cyclotron_frequency();
+    double nu_e = params_.collision_frequency;
+    double nu_i = params_.ion_collision_frequency;
     
-    std::complex<double> denominator(omega * (omega - omega_ce), nu * omega);
+    std::complex<double> omega_e(omega, -nu_e);
+    std::complex<double> omega_i(omega, -nu_i);
+    
+    std::complex<double> electron_term = (omega_pe * omega_pe) / 
+                                       (omega_e * (omega_e - omega_ce));
+    std::complex<double> ion_term = (omega_pi * omega_pi) / 
+                                  (omega_i * (omega_i + omega_ci));
+    
     std::complex<double> k = omega / params_.LIGHT_SPEED * 
-                            std::sqrt(1.0 - (omega_pe * omega_pe) / denominator);
+                            std::sqrt(1.0 - electron_term - ion_term);
     
     return k;
 }
 
 std::complex<double> DispersionRelation::ordinary_mode(double omega) const {
     double omega_pe = params_.electron_plasma_frequency();
-    double nu = params_.collision_frequency;
+    double omega_pi = params_.ion_plasma_frequency();
+    double nu_e = params_.collision_frequency;
+    double nu_i = params_.ion_collision_frequency;
     
-    std::complex<double> denominator(omega * omega, nu * omega);
+    std::complex<double> omega_e(omega, -nu_e);
+    std::complex<double> omega_i(omega, -nu_i);
+    
+    // Contribución de ambas especies
+    std::complex<double> electron_term = (omega_pe * omega_pe) / (omega_e * omega_e);
+    std::complex<double> ion_term = (omega_pi * omega_pi) / (omega_i * omega_i);
+    
     std::complex<double> k = omega / params_.LIGHT_SPEED * 
-                            std::sqrt(1.0 - (omega_pe * omega_pe) / denominator);
+                            std::sqrt(1.0 - electron_term - ion_term);
     
     return k;
 }
@@ -53,23 +91,31 @@ std::complex<double> DispersionRelation::ordinary_mode(double omega) const {
 std::complex<double> DispersionRelation::extraordinary_mode(double omega) const {
     double omega_pe = params_.electron_plasma_frequency();
     double omega_ce = params_.electron_cyclotron_frequency();
-    double nu = params_.collision_frequency;
+    double omega_pi = params_.ion_plasma_frequency();
+    double omega_ci = params_.ion_cyclotron_frequency();
+    double nu_e = params_.collision_frequency;
+    double nu_i = params_.ion_collision_frequency;
     
-    // Relación más precisa para el modo X
-    std::complex<double> omega_complex(omega, -nu); // ω → ω - iν
+    std::complex<double> omega_e(omega, -nu_e);
+    std::complex<double> omega_i(omega, -nu_i);
     
+    // Componentes del tensor dieléctrico con ambas especies
     std::complex<double> S = 1.0 - (omega_pe * omega_pe) / 
-                            (omega_complex * omega_complex - omega_ce * omega_ce);
+                            (omega_e * omega_e - omega_ce * omega_ce) -
+                            (omega_pi * omega_pi) / 
+                            (omega_i * omega_i - omega_ci * omega_ci);
+    
     std::complex<double> D = (omega_ce * omega_pe * omega_pe) / 
-                            (omega_complex * (omega_complex * omega_complex - omega_ce * omega_ce));
-    std::complex<double> P = 1.0 - (omega_pe * omega_pe) / (omega_complex * omega_complex);
+                            (omega_e * (omega_e * omega_e - omega_ce * omega_ce)) +
+                            (omega_ci * omega_pi * omega_pi) / 
+                            (omega_i * (omega_i * omega_i - omega_ci * omega_ci));
     
-    // Relación de dispersión completa para el modo X
-    std::complex<double> numerator = S * S - D * D;
-    std::complex<double> denominator = S;
+    std::complex<double> P = 1.0 - (omega_pe * omega_pe) / (omega_e * omega_e) -
+                            (omega_pi * omega_pi) / (omega_i * omega_i);
     
-    std::complex<double> n_squared = (numerator / denominator); // Índice de refracción al cuadrado
-    std::complex<double> k = (omega_complex / params_.LIGHT_SPEED) * std::sqrt(n_squared);
+    // Fórmula completa para el modo X
+    std::complex<double> n_squared = (S * S - D * D) / S;
+    std::complex<double> k = (omega / params_.LIGHT_SPEED) * std::sqrt(n_squared);
     
     return k;
 }

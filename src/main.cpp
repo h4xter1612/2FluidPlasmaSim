@@ -11,6 +11,10 @@ int main() {
     params.collision_frequency = 1e7;    // s^{-1}
     params.length = 1.0;                 // m
     params.grid_points = 1000;
+    // Nuevos parámetros iónicos
+    params.ion_density = 1e18;           // n_i = n_e para plasma neutro
+    params.ion_mass = params.PROTON_MASS; // Iones de hidrógeno
+    params.ion_collision_frequency = 1e6; // Colisiones iónicas (menores que electrónicas)
 
     // Crear y configurar simulador
     TwoFluidSimulator simulator(params);

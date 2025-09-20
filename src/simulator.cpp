@@ -23,8 +23,10 @@ void TwoFluidSimulator::initialize() {
     // Inicializar campos y corrientes a cero
     fields_.resize(6, std::vector<double>(params_.grid_points, 0.0));
     currents_.resize(3, std::vector<double>(params_.grid_points, 0.0));
+    currents_ion_.resize(3, std::vector<double>(params_.grid_points, 0.0)); // Nuevo
     fields_prev_.resize(6, std::vector<double>(params_.grid_points, 0.0));
     currents_prev_.resize(3, std::vector<double>(params_.grid_points, 0.0));
+    currents_ion_prev_.resize(3, std::vector<double>(params_.grid_points, 0.0)); // Nuevo
 }
 
 void TwoFluidSimulator::excite_mode(const std::string& mode_type, double frequency, double amplitude, double time) {
@@ -143,19 +145,27 @@ void TwoFluidSimulator::export_field_data_binary(const std::string& filename) co
 void TwoFluidSimulator::compute_derivatives(
     const std::vector<std::vector<double>>& fields,
     const std::vector<std::vector<double>>& currents,
+    const std::vector<std::vector<double>>& currents_ion,
     std::vector<std::vector<double>>& dfields_dt,
-    std::vector<std::vector<double>>& dcurrents_dt) {
+    std::vector<std::vector<double>>& dcurrents_dt,
+    std::vector<std::vector<double>>& dcurrents_dt_ion) {
 
     double c = params_.LIGHT_SPEED;
     double epsilon0 = params_.VACUUM_PERMITTIVITY;
     double dz = z_grid_[1] - z_grid_[0];
+    // Electronic parameters
     double omega_pe = params_.electron_plasma_frequency();
     double omega_ce = params_.electron_cyclotron_frequency();
     double nu = params_.collision_frequency;
+    // Ionic parameters
+    double omega_pi = params_.ion_plasma_frequency();
+    double omega_ci = params_.ion_cyclotron_frequency();
+    double nu_i = params_.ion_collision_frequency;
 
     // Inicializar derivadas a cero
     for (auto& vec : dfields_dt) std::fill(vec.begin(), vec.end(), 0.0);
     for (auto& vec : dcurrents_dt) std::fill(vec.begin(), vec.end(), 0.0);
+    for (auto& vec : dcurrents_dt_ion) std::fill(vec.begin(), vec.end(), 0.0);  // Ionic variable
 
     // Diferencias finitas de 4to orden para derivadas espaciales
     for (int i = 2; i < params_.grid_points - 2; ++i) {
@@ -166,21 +176,29 @@ void TwoFluidSimulator::compute_derivatives(
         double dBy_dz = (-fields[4][i+2] + 8*fields[4][i+1] - 8*fields[4][i-1] + fields[4][i-2]) / (12.0 * dz);
 
         // Ecuaciones de Maxwell para 1D
-        dfields_dt[0][i] = c * c * dBy_dz - currents[0][i] / epsilon0;  // ∂Ex/∂t = c²∂By/∂z - Jx/ε₀
-        dfields_dt[1][i] = -c * c * dBx_dz - currents[1][i] / epsilon0; // ∂Ey/∂t = -c²∂Bx/∂z - Jy/ε₀
+        dfields_dt[0][i] = c * c * dBy_dz -  (currents[0][i] + currents_ion[0][i]) / epsilon0;  // ∂Ex/∂t = c²∂By/∂z - Jx/ε₀
+        dfields_dt[1][i] = -c * c * dBx_dz - (currents[1][i] + currents_ion[1][i]) / epsilon0; // ∂Ey/∂t = -c²∂Bx/∂z - Jy/ε₀
         dfields_dt[2][i] = -currents[2][i] / epsilon0;                  // ∂Ez/∂t = -Jz/ε₀
 
         dfields_dt[3][i] = -dEy_dz;  // ∂Bx/∂t = -∂Ey/∂z
         dfields_dt[4][i] = dEx_dz;   // ∂By/∂t = ∂Ex/∂z
         dfields_dt[5][i] = 0.0;      // ∂Bz/∂t = 0
 
-        // Ecuaciones de momento para corrientes
+        // Ecuaciones de momento para corrientes electronicas
         dcurrents_dt[0][i] = epsilon0 * omega_pe * omega_pe * fields[0][i] + 
             omega_ce * currents[1][i] - nu * currents[0][i];
         dcurrents_dt[1][i] = epsilon0 * omega_pe * omega_pe * fields[1][i] - 
             omega_ce * currents[0][i] - nu * currents[1][i];
         dcurrents_dt[2][i] = epsilon0 * omega_pe * omega_pe * fields[2][i] - 
             nu * currents[2][i];
+        // ECUACIONES DE MOMENTO PARA IONES (nuevas)
+        // Nota: signo opuesto para el término de ciclotrón
+        dcurrents_dt_ion[0][i] = epsilon0 * omega_pi * omega_pi * fields[0][i] - 
+                                omega_ci * currents_ion[1][i] - nu_i * currents_ion[0][i];
+        dcurrents_dt_ion[1][i] = epsilon0 * omega_pi * omega_pi * fields[1][i] + 
+                                omega_ci * currents_ion[0][i] - nu_i * currents_ion[1][i];
+        dcurrents_dt_ion[2][i] = epsilon0 * omega_pi * omega_pi * fields[2][i] - 
+                                nu_i * currents_ion[2][i];
             
         // Diagnóstico adicional para detectar problemas
         if (i == 100 && std::isnan(dfields_dt[0][i])) {
@@ -194,20 +212,27 @@ void TwoFluidSimulator::compute_derivatives(
 void TwoFluidSimulator::update_system_rk4(double dt) {
     // Vectores para almacenar las k (pendientes) de RK4
     std::vector<std::vector<double>> k1_fields(6, std::vector<double>(params_.grid_points));
-    std::vector<std::vector<double>> k1_currents(3, std::vector<double>(params_.grid_points));
     std::vector<std::vector<double>> k2_fields(6, std::vector<double>(params_.grid_points));
-    std::vector<std::vector<double>> k2_currents(3, std::vector<double>(params_.grid_points));
     std::vector<std::vector<double>> k3_fields(6, std::vector<double>(params_.grid_points));
-    std::vector<std::vector<double>> k3_currents(3, std::vector<double>(params_.grid_points));
     std::vector<std::vector<double>> k4_fields(6, std::vector<double>(params_.grid_points));
+    // Electrons
+    std::vector<std::vector<double>> k1_currents(3, std::vector<double>(params_.grid_points));
+    std::vector<std::vector<double>> k2_currents(3, std::vector<double>(params_.grid_points));
+    std::vector<std::vector<double>> k3_currents(3, std::vector<double>(params_.grid_points));
     std::vector<std::vector<double>> k4_currents(3, std::vector<double>(params_.grid_points));
-
+    // Ions
+    // Añadir implementación similar para iones:
+    std::vector<std::vector<double>> k1_currents_ion(3, std::vector<double>(params_.grid_points));
+    std::vector<std::vector<double>> k2_currents_ion(3, std::vector<double>(params_.grid_points));
+    std::vector<std::vector<double>> k3_currents_ion(3, std::vector<double>(params_.grid_points));
+    std::vector<std::vector<double>> k4_currents_ion(3, std::vector<double>(params_.grid_points));
     // Vectores temporales para almacenar estados intermedios
     std::vector<std::vector<double>> fields_temp = fields_;
     std::vector<std::vector<double>> currents_temp = currents_;
+    std::vector<std::vector<double>> currents_ion_temp = currents_ion_;
 
     // --- Primer paso de RK4 (k1) ---
-    compute_derivatives(fields_, currents_, k1_fields, k1_currents);
+    compute_derivatives(fields_, currents_, currents_ion_, k1_fields, k1_currents, k1_currents_ion);
 
     // --- Segundo paso de RK4 (k2) ---
     for (int i = 0; i < 6; ++i) {
@@ -221,7 +246,12 @@ void TwoFluidSimulator::update_system_rk4(double dt) {
         }
     }
 
-    compute_derivatives(fields_temp, currents_temp, k2_fields, k2_currents);
+    for (int i = 0; i < 3; ++i) {
+        for (int j = 0; j < params_.grid_points; ++j) {
+            currents_ion_temp[i][j] = currents_ion_[i][j] + 0.5 * dt * k1_currents_ion[i][j];
+        }
+    }
+    compute_derivatives(fields_temp, currents_temp, currents_ion_temp, k2_fields, k2_currents, k2_currents_ion);
 
     // --- Tercer paso de RK4 (k3) ---
     for (int i = 0; i < 6; ++i) {
@@ -234,8 +264,13 @@ void TwoFluidSimulator::update_system_rk4(double dt) {
             currents_temp[i][j] = currents_[i][j] + 0.5 * dt * k2_currents[i][j];
         }
     }
+    for (int i = 0; i < 3; ++i) {
+        for (int j = 0; j < params_.grid_points; ++j) {
+            currents_ion_temp[i][j] = currents_ion_[i][j] + 0.5 * dt * k2_currents_ion[i][j];
+        }
+    }
 
-    compute_derivatives(fields_temp, currents_temp, k3_fields, k3_currents);
+    compute_derivatives(fields_temp, currents_temp, currents_ion_temp, k3_fields, k3_currents, k3_currents_ion);
 
     // --- Cuarto paso de RK4 (k4) ---
     for (int i = 0; i < 6; ++i) {
@@ -249,7 +284,12 @@ void TwoFluidSimulator::update_system_rk4(double dt) {
         }
     }
 
-    compute_derivatives(fields_temp, currents_temp, k4_fields, k4_currents);
+    for (int i = 0; i < 3; ++i) {
+        for (int j = 0; j < params_.grid_points; ++j) {
+            currents_ion_temp[i][j] = currents_ion_[i][j] + dt * k3_currents_ion[i][j];
+        }
+    }
+    compute_derivatives(fields_temp, currents_temp, currents_ion_temp, k4_fields, k4_currents, k4_currents_ion);
 
     // --- Combinar resultados para campos ---
     for (int i = 0; i < 6; ++i) {
@@ -267,6 +307,12 @@ void TwoFluidSimulator::update_system_rk4(double dt) {
         }
     }
     
+    for (int i = 0; i < 3; ++i) {
+        for (int j = 0; j < params_.grid_points; ++j) {
+            currents_ion_[i][j] += dt * (k1_currents_ion[i][j] + 2*k2_currents_ion[i][j] + 
+                2*k3_currents_ion[i][j] + k4_currents_ion[i][j]) / 6.0;
+        }
+    }
     // Después de actualizar campos y corrientes, verificar valores
     for (int i = 0; i < 6; ++i) {
         for (int j = 0; j < params_.grid_points; ++j) {
@@ -283,16 +329,32 @@ void TwoFluidSimulator::update_system_rk4(double dt) {
             }
         }
     }
+    for (int i = 0; i < 3; ++i) {
+        for (int j = 0; j < params_.grid_points; ++j) {
+            if (std::isnan(currents_ion_[i][j]) || std::isinf(currents_ion_[i][j])) {
+                currents_ion_[i][j] = 0.0;  // Resetear valores problemáticos
+            }
+        }
+    }
+
 }
 
 void TwoFluidSimulator::apply_collisions(double dt) {
     double nu = params_.collision_frequency;
+    double nu_i = params_.ion_collision_frequency;
 
     // Aplicar amortiguamiento exponencial debido a colisiones
+    // Electrons
     for (int i = 0; i < params_.grid_points; ++i) {
         currents_[0][i] *= std::exp(-nu * dt);
         currents_[1][i] *= std::exp(-nu * dt);
         currents_[2][i] *= std::exp(-nu * dt);
+    }
+    // Ions
+    for (int i = 0; i < params_.grid_points; ++i) {
+        currents_ion_[0][i] *= std::exp(-nu_i * dt);
+        currents_ion_[1][i] *= std::exp(-nu_i * dt);
+        currents_ion_[2][i] *= std::exp(-nu_i * dt);
     }
 }
 
@@ -314,12 +376,13 @@ void TwoFluidSimulator::apply_boundary_conditions_pml() {
 
 void TwoFluidSimulator::export_field_data(const std::string& filename) const {
     std::ofstream file(filename);
-    file << "z,Ex,Ey,Ez,Bx,By,Bz,Jx,Jy,Jz\n";
+    file << "z,Ex,Ey,Ez,Bx,By,Bz,Jx_e,Jy_e,Jz_e,Jx_i,Jy_i,Jz_i\n";
 
     for (int i = 0; i < params_.grid_points; ++i) {
         file << z_grid_[i];
         for (int j = 0; j < 6; ++j) file << "," << fields_[j][i];
         for (int j = 0; j < 3; ++j) file << "," << currents_[j][i];
+        for (int j = 0; j < 3; ++j) file << "," << currents_ion_[j][i];
         file << "\n";
     }
 

@@ -11,6 +11,12 @@ struct PlasmaParams {
     double ion_temperature;               // T_i (eV) - para extensiones futuras
     double ion_collision_frequency;       // ν_i (s^{-1})
     double ion_mass;                      // m_i (kg) - typically proton mass
+
+    // 2D PlasmaParams
+    int dimension;           // 1 o 2
+    int nx, ny;              // Puntos de la malla en x e y
+    double dx, dy;           // Espaciado en x e y
+    double length_x, length_y; // Dimensiones del dominio
     
     // Constantes físicas
     static constexpr double PROTON_MASS = 1.6726e-27;
@@ -25,6 +31,9 @@ struct PlasmaParams {
     // Métodos para frecuencias iónicas
     double ion_plasma_frequency() const;
     double ion_cyclotron_frequency() const;
+    // Métodos auxiliares
+    bool is_1d() const { return dimension == 1; }
+    bool is_2d() const { return dimension == 2; }
 };
 
 #endif

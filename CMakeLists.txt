@@ -11,7 +11,9 @@ include_directories(include)
 set(SOURCES
     src/main.cpp
     src/dispersion.cpp
-    src/simulator.cpp
+    src/simulator_1d.cpp
+    src/simulator_2d.cpp
+    src/simulator_base.cpp
 )
 
 add_executable(TwoFluidSimulator ${SOURCES})

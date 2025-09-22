@@ -97,8 +97,8 @@ void Simulator1D::run_timesteps(int num_steps, double dt) {
         }
         
         update_system_rk4(dt);
-        // apply_collisions(dt);
-        // apply_boundary_conditions_pml();
+        apply_collisions(dt);
+        apply_boundary_conditions_pml();
         
         current_time += dt;
         step_count_++;

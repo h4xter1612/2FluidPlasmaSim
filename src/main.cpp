@@ -72,14 +72,14 @@ int main(int argc, char* argv[]) {
     double dt;
     if (dimension == 1) {
         double dz = params.length_x / (params.nx - 1);
-        dt = 0.01 * dz / params.LIGHT_SPEED;
+        dt = 0.1 * dz / params.LIGHT_SPEED;
         std::cout << "Using timestep dt = " << dt << " s (CFL recommends < " << dz/params.LIGHT_SPEED << " s)\n";
     } else {
         // Condición CFL para 2D
         double dx = params.length_x / (params.nx - 1);
         double dy = params.length_y / (params.ny - 1);
         double cfl_dt = 1.0 / (params.LIGHT_SPEED * std::sqrt(1.0/(dx*dx) + 1.0/(dy*dy)));
-        dt = 0.01 * cfl_dt;
+        dt = 0.1 * cfl_dt;
         std::cout << "Using timestep dt = " << dt << " s (CFL recommends < " << cfl_dt << " s)\n";
     }
 

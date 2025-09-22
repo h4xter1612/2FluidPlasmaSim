@@ -32,8 +32,8 @@ The simulator solves the following coupled equations:
 
 **Maxwell's Equations:**  
 
-$\nabla \times E = -\frac{\partial B}{\partial t}$, $\quad  
-\nabla \times B = \mu_0(J_e + J_i) + \mu_0 \epsilon_0 \frac{\partial E}{\partial t}$
+$\nabla \times E = -\frac{\partial B}{\partial t}$, 
+$\quad \nabla \times B = \mu_0(J_e + J_i) + \mu_0 \epsilon_0 \frac{\partial E}{\partial t}$
 
 **Electron Fluid Equations:**  
 

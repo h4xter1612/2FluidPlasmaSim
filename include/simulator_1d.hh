@@ -15,6 +15,8 @@ public:
     void export_dispersion_data(const std::string& filename) const override;
     void export_field_data_binary(const std::string& filename) const;
 
+    std::vector<double> calculate_energy_densities() const;
+
 private:
     std::vector<double> z_grid_;
     std::vector<std::vector<double>> fields_;

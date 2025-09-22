@@ -16,8 +16,10 @@ int main(int argc, char* argv[]) {
     // Configurar parámetros del plasma
     PlasmaParams params;
     params.dimension = dimension;
+    std::string dataf;
     
     if (dimension == 1) {
+        dataf = "data/field_data";
         params.nx = 1000;
         params.ny = 1;
         params.length_x = 1.0;
@@ -28,6 +30,7 @@ int main(int argc, char* argv[]) {
         params.grid_points = params.nx;
         params.length = params.length_x;
     } else {
+        dataf = "data/field_data_2d";
         // Para 2D, usar una malla más pequeña por razones de rendimiento
         params.nx = 200;
         params.ny = 200;
@@ -60,27 +63,24 @@ int main(int argc, char* argv[]) {
     
     simulator->initialize();
 
-    std::string dataf;
 
     // Calcular y exportar relaciones de dispersión
-    simulator->export_dispersion_data(dataf+"dispersion_data.csv");
+    simulator->export_dispersion_data("data/dispersion_data.csv");
     std::cout << "Dispersion data exported to dispersion_data.csv\n";
 
     // Calcular el paso de tiempo máximo permitido por CFL
     double dt;
     if (dimension == 1) {
         double dz = params.length_x / (params.nx - 1);
-        dt = 0.1 * dz / params.LIGHT_SPEED;
+        dt = 0.01 * dz / params.LIGHT_SPEED;
         std::cout << "Using timestep dt = " << dt << " s (CFL recommends < " << dz/params.LIGHT_SPEED << " s)\n";
-        dataf = "data/field_data";
     } else {
         // Condición CFL para 2D
         double dx = params.length_x / (params.nx - 1);
         double dy = params.length_y / (params.ny - 1);
         double cfl_dt = 1.0 / (params.LIGHT_SPEED * std::sqrt(1.0/(dx*dx) + 1.0/(dy*dy)));
-        dt = 0.1 * cfl_dt;
+        dt = 0.01 * cfl_dt;
         std::cout << "Using timestep dt = " << dt << " s (CFL recommends < " << cfl_dt << " s)\n";
-        dataf = "data/field_data_2d";
     }
 
     simulator->set_save_interval(100);

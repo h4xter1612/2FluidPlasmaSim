@@ -15,6 +15,7 @@ double PlasmaParams::electron_cyclotron_frequency() const {
     return ELEMENTARY_CHARGE * magnetic_field / ELECTRON_MASS;
 }
 double PlasmaParams::ion_plasma_frequency() const {
+    if (ion_density <= 0 || ion_mass <= 0) return 0.0;
     return std::sqrt(ion_density * ELEMENTARY_CHARGE * ELEMENTARY_CHARGE / 
                     (ion_mass * VACUUM_PERMITTIVITY));
 }

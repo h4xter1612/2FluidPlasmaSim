@@ -65,7 +65,17 @@ void Simulator1D::run_timesteps(int num_steps, double dt) {
     if (dt > cfl_dt * 0.1) {
         std::cout << "Advertencia: dt = " << dt << " puede ser demasiado grande. CFL recomienda dt < " << cfl_dt * 0.1 << std::endl;
     }
+
+    // Archivo para guardar evolución de energía
+    std::ofstream energy_file("data/energy_evolution.csv");
+    energy_file << "time,em_energy,electron_energy,ion_energy,total_energy\n";
     
+    // Energía inicial
+    auto initial_energy = calculate_energy_densities();
+    energy_file << current_time << "," << initial_energy[0] << "," 
+                << initial_energy[1] << "," << initial_energy[2] << "," 
+                << initial_energy[3] << "\n";
+
     for (int step = 0; step < num_steps; ++step) {
         if (!current_mode_.empty()) {
             excite_mode(current_mode_, current_frequency_, current_amplitude_, current_time);
@@ -77,10 +87,18 @@ void Simulator1D::run_timesteps(int num_steps, double dt) {
                                   std::to_string(step_count_ / save_interval_) + ".csv";
             export_field_data(filename);
         }
+
+        if (step_count_ % save_interval_ == 0) {
+            // Guardar energía cada cierto intervalo
+            auto energies = calculate_energy_densities();
+            energy_file << current_time << "," << energies[0] << "," 
+                       << energies[1] << "," << energies[2] << "," 
+                       << energies[3] << "\n";
+        }
         
         update_system_rk4(dt);
-        apply_collisions(dt);
-        apply_boundary_conditions_pml();
+        // apply_collisions(dt);
+        // apply_boundary_conditions_pml();
         
         current_time += dt;
         step_count_++;
@@ -331,6 +349,54 @@ void Simulator1D::apply_boundary_conditions_pml() {
             fields_[j][params_.grid_points - 1 - i] *= std::exp(-sigma);
         }
     }
+}
+
+std::vector<double> Simulator1D::calculate_energy_densities() const {
+    std::vector<double> energies(4, 0.0); // [EM, electron, ion, total]
+    double dz = z_grid_[1] - z_grid_[0];
+    
+    // Constantes físicas
+    double epsilon0 = params_.VACUUM_PERMITTIVITY;
+    double mu0 = 1.0 / (epsilon0 * params_.LIGHT_SPEED * params_.LIGHT_SPEED);
+    double omega_pe = params_.electron_plasma_frequency();
+    double omega_pi = params_.ion_plasma_frequency();
+    
+    // Verificar que las frecuencias de plasma no sean cero
+    if (omega_pe == 0.0) omega_pe = 1e-10; // Evitar división por cero
+    if (omega_pi == 0.0) omega_pi = 1e-10;
+    
+    for (int i = 0; i < params_.grid_points; ++i) {
+        // 1. Energía electromagnética por unidad de volumen: (ε₀E² + B²/μ₀)/2
+        double E_sq = 0.0, B_sq = 0.0;
+        for (int comp = 0; comp < 3; ++comp) {
+            E_sq += fields_[comp][i] * fields_[comp][i];
+            B_sq += fields_[comp+3][i] * fields_[comp+3][i];
+        }
+        double em_energy_density = 0.5 * (epsilon0 * E_sq + B_sq / mu0);
+        
+        // 2. Energía cinética electrónica por unidad de volumen: Jₑ²/(2ε₀ωₚₑ²)
+        double Je_sq = 0.0;
+        for (int comp = 0; comp < 3; ++comp) {
+            Je_sq += currents_[comp][i] * currents_[comp][i];
+        }
+        double electron_energy_density = Je_sq / (2.0 * epsilon0 * omega_pe * omega_pe);
+        
+        // 3. Energía cinética iónica por unidad de volumen: Jᵢ²/(2ε₀ωₚᵢ²)
+        double Ji_sq = 0.0;
+        for (int comp = 0; comp < 3; ++comp) {
+            Ji_sq += currents_ion_[comp][i] * currents_ion_[comp][i];
+        }
+        double ion_energy_density = Ji_sq / (2.0 * epsilon0 * omega_pi * omega_pi);
+        
+        // Integrar sobre el volumen (1D: multiplicar por dz)
+        energies[0] += em_energy_density * dz;
+        energies[1] += electron_energy_density * dz;
+        energies[2] += ion_energy_density * dz;
+    }
+    
+    energies[3] = energies[0] + energies[1] + energies[2];
+    
+    return energies;
 }
 
 void Simulator1D::export_field_data(const std::string& filename) const {

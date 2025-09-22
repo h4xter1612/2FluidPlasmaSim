@@ -31,22 +31,17 @@ Main features:
 The simulator solves the following coupled equations:  
 
 **Maxwell's Equations:**  
-$$
-\nabla \times E = -\frac{\partial B}{\partial t}, \quad  
-\nabla \times B = \mu_0(J_e + J_i) + \mu_0 \epsilon_0 \frac{\partial E}{\partial t}
-$$
+
+$\nabla \times E = -\frac{\partial B}{\partial t}, \quad  
+\nabla \times B = \mu_0(J_e + J_i) + \mu_0 \epsilon_0 \frac{\partial E}{\partial t}$
 
 **Electron Fluid Equations:**  
-$$
 
-\frac{\partial J_e}{\partial t} = \epsilon_0 \omega_{pe}^2 E + \omega_e J_e \times \hat{z} - \nu_e J_e
+$\frac{\partial J_e}{\partial t} = \epsilon_0 \omega_{pe}^2 E + \omega_e J_e \times \hat{z} - \nu_e J_e$
 
-$$
+**Ion Fluid Equations:**
 
-**Ion Fluid Equations:**  
-$$
-\frac{\partial J_i}{\partial t} = \epsilon_0 \omega_{pi}^2 E - \omega_i J_i \times \hat{z} - \nu_i J_i
-$$
+$\frac{\partial J_i}{\partial t} = \epsilon_0 \omega_{pi}^2 E - \omega_i J_i \times \hat{z} - \nu_i J_i$
 
 Where:  
 

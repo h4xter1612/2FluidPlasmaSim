@@ -1,7 +1,6 @@
 # 2D Plasma Fluid Simulator: Cold Plasma Wave Propagation  
 
-![C++17](https://img.shields.io/badge/Language-C++17-blue)  
-![Python](https://img.shields.io/badge/Visualization-Python-green)  
+![C++17](https://img.shields.io/badge/Language-C++17-blue)  ![Python](https://img.shields.io/badge/Visualization-Python-green)  
 ![Plasma Physics](https://img.shields.io/badge/Physics-Plasma_Physics-red)  
 
 ---

@@ -38,7 +38,9 @@ $$
 
 **Electron Fluid Equations:**  
 $$
+
 \frac{\partial J_e}{\partial t} = \epsilon_0 \omega_{pe}^2 E + \omega_e J_e \times \hat{z} - \nu_e J_e
+
 $$
 
 **Ion Fluid Equations:**  
@@ -48,9 +50,9 @@ $$
 
 Where:  
 
-- $ \omega_{pe}, \omega_{pi} $: electron and ion plasma frequencies  
-- $ \omega_e, \omega_i $: electron and ion cyclotron frequencies  
-- $ \nu_e, \nu_i $: collision frequencies  
+- $\omega_{pe}, \omega_{pi}$: electron and ion plasma frequencies  
+- $\omega_e, \omega_i$: electron and ion cyclotron frequencies  
+- $\nu_e, \nu_i$: collision frequencies  
 
 ---
 
